@@ -33,7 +33,7 @@ reading.
 
 ### 🐑 Prerequisites
 
-1. Install Clojure, following [those instructions(https://purelyfunctional.tv/guide/how-to-install-clojure/). You will need:
+1. Install [Clojure](https://clojure.org/), following [those instructions](https://purelyfunctional.tv/guide/how-to-install-clojure/).
 2. Install [Node.js](https://nodejs.org/) (for `npm`).
 3. Install [Caddy](https://caddyserver.com/docs/download), for reverse proxy.
    * We recommend using the version from the official distribution.
