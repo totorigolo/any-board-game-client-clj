@@ -1,7 +1,6 @@
 (ns cards-client-clj.subs
   (:require
-   [re-frame.core :as re-frame]
-   [cljs.pprint :refer [pprint]]))
+   [re-frame.core :as re-frame]))
 
 ;; -------------------------------------------------------------------------------------
 ;; For documentation about layers, see:
@@ -9,11 +8,6 @@
 
 ;; -------------------------------------------------------------------------------------
 ;; Layer 2 - Extractors
-
-(re-frame/reg-sub
- ::name
- (fn [db]
-   (:name db)))
 
 (re-frame/reg-sub
  ::active-panel
@@ -29,11 +23,6 @@
  ::games
  (fn [db _]
    (:games db)))
-
-(re-frame/reg-sub
- ::loading?
- (fn [db _]
-   (:loading? db)))
 
 (re-frame/reg-sub
  ::re-pressed-example-text
@@ -60,6 +49,24 @@
    (:known rounds)))
 
 (re-frame/reg-sub
+ ::fetching-rounds?
+ :<- [::rounds]
+ (fn [rounds _]
+   (:fetching? rounds)))
+
+(re-frame/reg-sub
+ ::fetching-games?
+ :<- [::games]
+ (fn [games _]
+   (:fetching? games)))
+
+(re-frame/reg-sub
+ ::game-list
+ :<- [::games]
+ (fn [games _]
+   (:list games)))
+
+(re-frame/reg-sub
  ::joined-rounds
  :<- [::rounds]
  (fn [rounds _]
@@ -76,12 +83,6 @@
  :<- [::profile]
  (fn [profile _]
    (:username profile)))
-
-(re-frame/reg-sub
- ::is-loading?
- :<- [::loading?]
- (fn [loading? [_ what]]
-   (what loading?)))
 
 (re-frame/reg-sub
  ::known-round

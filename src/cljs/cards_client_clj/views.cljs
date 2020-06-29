@@ -4,31 +4,29 @@
    [breaking-point.core :as bp]
    [cards-client-clj.subs :as subs]
    [cards-client-clj.events :as events]
-   [cards-client-clj.routes :as routes]
-   [cljs.pprint :refer [pprint]]))
+   [cards-client-clj.routes :as routes]))
 
 (defn nav []
-  (map (fn [{:keys [url title]}]
-         [:div {:key (str url title)}
-          [:a {:href url} title]])
-       [{:url (routes/home) :title "Home"}
-        {:url (routes/about) :title "About"}
-        {:url (routes/create-round) :title "Create new round"}
-        {:url (routes/join-round) :title "Join round"}
-        {:url (routes/play) :title "Play"}]))
+  (for [{:keys [url title]} [{:url (routes/home) :title "Home"}
+                             {:url (routes/about) :title "About"}
+                             {:url (routes/create-round) :title "Create new round"}
+                             {:url (routes/join-round) :title "Join round"}
+                             {:url (routes/play) :title "Play"}]]
+    [:div {:key title}
+     [:a {:href url} title]]))
 
 (defn view-username
-  [{:keys [editable]}]
+  [{:keys [editable?]}]
   [:div
    [:label {:for "username"} "User name:"]
    [:input#username
     {:type "text"
-     :disabled (not editable)
+     :disabled (not editable?)
      :value @(subscribe [::subs/username])
      :on-change #(dispatch [::events/change-username (-> % .-target .-value)])}]])
 
 (defn view-notification
-  [{:keys [id title text]}]
+  [{id :notification/id title :notification/title text :notification/text}]
   [:div {:key id}
    [:h1 title]
    [:p text]
@@ -39,7 +37,7 @@
   [:div
    (let [notifications @(subscribe [::subs/notifications])]
      (for [notification (vals notifications)]
-       ^{:key (:id notification)} [view-notification notification]))
+       ^{:key (:notification/id notification)} [view-notification notification]))
    [:h1 title]
    (nav)
    body])
@@ -60,13 +58,12 @@
       re-pressed-example-text])])
 
 (defn home-panel []
-  (let [name @(subscribe [::subs/name])]
-    (panel (str "Home - " name)
-           [:div
-            [display-re-pressed-example]
-            [:div
-             [:h3 (str "screen-width: " @(subscribe [::bp/screen-width]))]
-             [:h3 (str "screen: " @(subscribe [::bp/screen]))]]])))
+  (panel "Home"
+         [:div
+          [display-re-pressed-example]
+          [:div
+           [:h3 (str "screen-width: " @(subscribe [::bp/screen-width]))]
+           [:h3 (str "screen: " @(subscribe [::bp/screen]))]]]))
 
 (defn about-panel []
   (panel "About"
@@ -86,8 +83,8 @@
    "Refresh available rounds"])
 
 (defn view-game
-  [{:keys [gameId rules description min_players max_players]}]
-  [:div {:key gameId}
+  [{:keys [gameId rules description min_players max_players] :as game}]
+  [:div
    [:h1 gameId]
    [:p description]
    [:p rules]
@@ -99,11 +96,11 @@
   (panel "Create round"
          [:div
           [button-refresh-games]
-          [view-username {:editable true}]
-          (when @(subscribe [::subs/is-loading? :games])
+          [view-username {:editable? true}]
+          (when @(subscribe [::subs/fetching-games?])
             [:p "Loading..."])
-          (let [games @(subscribe [::subs/games])]
-            (map view-game games))]))
+          (for [game @(subscribe [::subs/game-list])]
+            ^{:key (:gameId game)} [view-game game])]))
 
 (defn play-round [roundId]
   [:div
@@ -111,10 +108,11 @@
     "Change current round"]
    [:p (str "Current round: " roundId)]])
 
-(defn play-view-round [{:keys [id player-id]}]
+(defn play-view-round [{:keys [id player-id joining?]}]
   (let [{:keys [gameId players createdOn]} @(subscribe [::subs/known-round id])]
     [:div {:key id}
      [:h1 id]
+     [:p (str "Joining: " (boolean joining?))]
      [:p (str "Game ID: " gameId)]
      [:p (str "Player ID: " player-id)]
      [:p (str "Players: " players)]
@@ -125,20 +123,21 @@
 (defn play-no-round []
   [:div
    [:p "Choose a round, or go join or create one."]
-   (let [rounds @(subscribe [::subs/joined-rounds])]
-     (if (empty? rounds) (str "You didn't join any round yet.")
-         (map play-view-round (vals rounds))))])
+   (let [round-map @(subscribe [::subs/joined-rounds])]
+     (if (empty? round-map) (str "You didn't join any round yet.")
+         (for [round (vals round-map)]
+           ^{:key (:id round)} [play-view-round round])))])
 
 (defn play-panel []
   (panel "Play round"
          [:div
-          [view-username {:editable false}]
+          [view-username {:editable? false}]
           (if-let [roundId @(subscribe [::subs/current-round])]
             [play-round roundId]
             [play-no-round])]))
 
 (defn join-view-round [{:keys [id gameId players createdOn]}]
-  [:div {:key id}
+  [:div
    [:h1 id]
    [:p (str "Game ID: " gameId)]
    [:p (str "Players: " players)]
@@ -150,11 +149,11 @@
   (panel "Join round"
          [:div
           [button-refresh-known-rounds]
-          [view-username {:editable true}]
-          (when @(subscribe [::subs/is-loading? :rounds])
-            [:p "Loading..."])
-          (let [joinable-rounds @(subscribe [::subs/not-joined-known-rounds])]
-            (map join-view-round (vals joinable-rounds)))]))
+          [view-username {:editable? true}]
+          (when @(subscribe [::subs/fetching-rounds?])
+            [:p "Fetching joinable rounds..."])
+          (for [joinable-round (vals @(subscribe [::subs/not-joined-known-rounds]))]
+            ^{:key (:id joinable-round)} [join-view-round joinable-round])]))
 
 (defn- panels [panel-name]
   (case panel-name

@@ -73,3 +73,12 @@ caddy stop
 Then, go to http://localhost:42800/, where the API is now available at `/api`.
 
 For more details, see [README.re-frame.md](./README.re-frame.md).
+
+## 🙏 Credits
+
+Thanks for the re-frame framework, its extensive documentation, and really
+interesting ideas.
+
+## 📜 Licence
+
+TBD

@@ -15,5 +15,15 @@
                 "cljsDefaultBuild": "app"
             }
         }
+    ],
+    "cSpell.enableFiletypes": [
+        "clojure"
+    ],
+    "cSpell.words": [
+        "defn",
+        "dissoc",
+        "pprint",
+        "vals",
+        "xhrio"
     ]
 }

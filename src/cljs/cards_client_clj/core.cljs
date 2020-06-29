@@ -21,8 +21,8 @@
     (rdom/render [views/root] root-el)))
 
 (defn init []
-  (routes/app-routes)
   (re-frame/dispatch-sync [::events/initialize-db])
+  (routes/app-routes)
   (re-frame/dispatch-sync [::rp/add-keyboard-event-listener "keydown"])
   (re-frame/dispatch-sync [::bp/set-breakpoints
                            {:breakpoints [:mobile
