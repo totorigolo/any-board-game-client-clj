@@ -1,5 +1,7 @@
 (ns cards-client-clj.views
   (:require
+   [clojure.string]
+   [clojure.pprint :refer [pprint]]
    [re-frame.core :refer [subscribe dispatch]]
    [breaking-point.core :as bp]
    [cards-client-clj.subs :as subs]
@@ -70,90 +72,152 @@
          [:div
           [:p "Wonderbar website, WIP"]]))
 
-(defn button-refresh-games
+(defn button-fetch-games
   []
   [:button {:class "button"
-            :on-click  #(dispatch [::events/refresh-games])}
+            :on-click  #(dispatch [::events/fetch-games])}
    "Refresh available games"])
 
-(defn button-refresh-known-rounds
+(defn button-refresh-public-rounds
   []
   [:button {:class "button"
-            :on-click  #(dispatch [::events/refresh-rounds])}
+            :on-click  #(dispatch [::events/fetch-rounds])}
    "Refresh available rounds"])
 
 (defn view-game
-  [{:keys [gameId rules description min_players max_players] :as game}]
+  [{:game-description/keys [id rules description min-players max-players]}]
   [:div
-   [:h1 gameId]
+   [:h1 id]
    [:p description]
    [:p rules]
-   [:p (str "Players: " min_players " - " max_players)]
-   [:button {:on-click #(dispatch [::events/start-game gameId])}
+   [:p (str "Players: " min-players " - " max-players)]
+   [:button {:on-click #(dispatch [::events/create-round id])}
     "Start"]])
 
 (defn create-round-panel []
   (panel "Create round"
          [:div
-          [button-refresh-games]
+          [button-fetch-games]
           [view-username {:editable? true}]
           (when @(subscribe [::subs/fetching-games?])
             [:p "Loading..."])
-          (for [game @(subscribe [::subs/game-list])]
-            ^{:key (:gameId game)} [view-game game])]))
+          (for [{game-id :game-description/id :as game} @(subscribe [::subs/game-list])]
+            ^{:key game-id} [view-game game])]))
 
-(defn play-round [roundId]
+(defn view-card-by-id
+  [component-id]
+  (let [component @(subscribe [::subs/current-round-component component-id])
+        actions @(subscribe [::subs/current-round-component-action component-id])]
+    [:div.component {:style {:border "1px solid blue"}}
+     (for [card (:cards component)]
+       [:p (with-out-str (pprint card))])
+     [:pre [:code (with-out-str (pprint component))]]
+     [:pre [:code (with-out-str (pprint actions))]]]))
+
+(defn view-card-deck
+  [component actions]
+  (let [on-click? (first (filter #(= (:type %) "OnClick") actions))]
+    [:div.component {:style {:border "1px solid red"}}
+     [:h4 (:id component)]
+     (for [card-id (:cards component)]
+       [:<> {:key card-id}
+        [view-card-by-id card-id]
+        (when on-click?
+          [:button
+           {:on-click #(dispatch [::events/play-action {:source-id (:id component)
+                                                        :target-id card-id}])}
+           "Play this card"])])
+     [:pre [:code (with-out-str (pprint component))]]
+     [:pre [:code (with-out-str (pprint actions))]]]))
+
+(defn view-current-round-components
+  [component-id]
+  (let [{:keys [id type] :as component} @(subscribe [::subs/current-round-component component-id])
+        actions @(subscribe [::subs/current-round-component-action component-id])]
+    ^{:key id}
+    (case type
+      "CardDeck" (view-card-deck component actions)
+      [:h3 (str "Unknown component type: " type)])))
+
+(defn view-current-round-components-at-position
+  [position]
+  (for [component-id @(subscribe [::subs/current-round-components-id-at-position position])]
+    ^{:key component-id} [view-current-round-components component-id]))
+
+(defn play-round [{round-id :round-info/id
+                   player-id :round-info/player-id
+                   :as round}]
   [:div
-   [:button {:on-click #(dispatch [::events/set-current-round nil])}
-    "Change current round"]
-   [:p (str "Current round: " roundId)]])
+   [:button {:on-click #(dispatch [::events/set-current-round nil])} "Change current round"]
 
-(defn play-view-round [{:keys [id player-id joining?]}]
-  (let [{:keys [gameId players createdOn]} @(subscribe [::subs/known-round id])]
-    [:div {:key id}
-     [:h1 id]
-     [:p (str "Joining: " (boolean joining?))]
-     [:p (str "Game ID: " gameId)]
-     [:p (str "Player ID: " player-id)]
-     [:p (str "Players: " players)]
-     [:p (str "Created on: " createdOn)]
-     [:button {:on-click #(dispatch [::events/set-current-round id])}
-      "Play"]]))
+   [:button {:on-click #(dispatch [::events/refresh-board round-id player-id])} "Refresh board"]
+
+   (when (:created-by-me? round)
+     [:button {:on-click #(dispatch [::events/start-game round-id player-id])} "Start the game"])
+   [:p (str "Current round: " round-id)]
+
+   [:h3 "center"]
+   (view-current-round-components-at-position "center")
+
+   [:h3 "top"]
+   (view-current-round-components-at-position "top")
+
+   [:h3 "left"]
+   (view-current-round-components-at-position "left")
+
+   [:h3 "right"]
+   (view-current-round-components-at-position "right")
+
+   [:h3 "bottom"]
+   (view-current-round-components-at-position "bottom")])
+
+(defn play-view-round [{:round-info/keys [id game-id player-id joining? players created-on]}]
+  [:div
+   [:h1 (str game-id " - " (clojure.string/join ", " players))]
+   [:p (str "Joining: " (boolean joining?))]
+   [:p (str "Round ID: " id)]
+   [:p (str "Game ID: " game-id)]
+   [:p (str "Player ID: " player-id)]
+   [:p (str "Players: " players)]
+   [:p (str "Created on: " created-on)]
+   [:button {:on-click #(dispatch [::events/set-current-round id])}
+    "Play"]])
 
 (defn play-no-round []
   [:div
    [:p "Choose a round, or go join or create one."]
    (let [round-map @(subscribe [::subs/joined-rounds])]
      (if (empty? round-map) (str "You didn't join any round yet.")
-         (for [round (vals round-map)]
-           ^{:key (:id round)} [play-view-round round])))])
+         (for [{round-id :round-info/id :as round} (vals round-map)]
+           ^{:key round-id} [play-view-round round])))])
 
 (defn play-panel []
   (panel "Play round"
          [:div
           [view-username {:editable? false}]
-          (if-let [roundId @(subscribe [::subs/current-round])]
-            [play-round roundId]
+          (if-let [current-round @(subscribe [::subs/current-round])]
+            [play-round current-round]
             [play-no-round])]))
 
-(defn join-view-round [{:keys [id gameId players createdOn]}]
+(defn join-view-round [{:round-info/keys [id game-id players created-on]}]
   [:div
-   [:h1 id]
-   [:p (str "Game ID: " gameId)]
+   [:h1 (str game-id " - " (clojure.string/join ", " players))]
+   [:p (str "Round ID: " id)]
+   [:p (str "Game ID: " game-id)]
    [:p (str "Players: " players)]
-   [:p (str "Created on: " createdOn)]
+   [:p (str "Created on: " created-on)]
    [:button {:on-click #(dispatch [::events/join-round id])}
     "Join"]])
 
 (defn join-round-panel []
   (panel "Join round"
          [:div
-          [button-refresh-known-rounds]
+          [button-refresh-public-rounds]
           [view-username {:editable? true}]
           (when @(subscribe [::subs/fetching-rounds?])
             [:p "Fetching joinable rounds..."])
-          (for [joinable-round (vals @(subscribe [::subs/not-joined-known-rounds]))]
-            ^{:key (:id joinable-round)} [join-view-round joinable-round])]))
+          (for [{round-id :round-info/id :as joinable-round} (vals @(subscribe [::subs/joinable-rounds]))]
+            ^{:key round-id} [join-view-round joinable-round])]))
 
 (defn- panels [panel-name]
   (case panel-name

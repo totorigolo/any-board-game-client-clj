@@ -20,10 +20,15 @@
         "clojure"
     ],
     "cSpell.words": [
+        "cognitect",
+        "condp",
         "defn",
+        "defonce",
         "dissoc",
         "pprint",
+        "println",
         "vals",
+        "websockets",
         "xhrio"
     ]
 }

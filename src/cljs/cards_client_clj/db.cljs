@@ -37,6 +37,14 @@
 (s/def ::notification (s/keys :req [:notification/id :notification/title :notification/text :notification/created-at]))
 (s/def ::notifications (s/map-of :notification/id ::notification))
 
+(s/def ::game-description (s/keys :req [:game-description/id
+                            :game-description/rules
+                            :game-description/description
+                            :game-description/min-players
+                            :game-description/max-players]))
+(s/def ::game-list (s/coll-of ::game-description))
+(s/def ::games (s/keys :req-un [::fetching? ::game-list]))
+
 (s/def ::username string?)
 
 (s/def ::active-panel keyword?)
@@ -45,7 +53,7 @@
 (s/def ::profile (s/keys :req-un []
                          :opt-un [::username]))
 
-(s/def ::rounds (s/keys :req-un [::known ::joined ::current]))
+(s/def ::rounds (s/keys :req-un [::public-rounds ::joined ::current]))
 
 (s/def ::app-db (s/keys :req-un [::games ::rounds ::profile ::notifications]
                         :opt-un [:breaking-point.core/breakpoints ::active-panel]))
@@ -53,24 +61,24 @@
 (comment
   (def example-app-db
     {:games {:fetching? true
-             :list []}
+             :game-list []}
      :rounds {:fetching? false
-              :known {"b37458c069964a90acdd6d731b26851d" {:gameId "bataille"
-                                                          :id "b37458c069964a90acdd6d731b26851d"
-                                                          :started false
-                                                          :players ["toto" "toto2"]
-                                                          :createdOn "2020-06-28 14:20:57.029670"
-                                                          :createdBy "toto"}
-                      "9b6279f9c0a14b5db8f75524248f959f" {:createdOn "2020-06-28 11:16:23.147761"
-                                                          :createdBy "toto"
-                                                          :minPlayers 2
-                                                          :public true
-                                                          :maxPlayers 4
-                                                          :playerId "427a1b3fda30425e96f21b4f2956d9fe"
-                                                          :status "pending"
-                                                          :id "9b6279f9c0a14b5db8f75524248f959f"
-                                                          :players ["toto" "toto2" "null"]
-                                                          :gameId "bataille"}}
+              :public-rounds {"b37458c069964a90acdd6d731b26851d" {:gameId "bataille"
+                                                                  :id "b37458c069964a90acdd6d731b26851d"
+                                                                  :started false
+                                                                  :players ["toto" "toto2"]
+                                                                  :createdOn "2020-06-28 14:20:57.029670"
+                                                                  :createdBy "toto"}
+                              "9b6279f9c0a14b5db8f75524248f959f" {:createdOn "2020-06-28 11:16:23.147761"
+                                                                  :createdBy "toto"
+                                                                  :minPlayers 2
+                                                                  :public true
+                                                                  :maxPlayers 4
+                                                                  :playerId "427a1b3fda30425e96f21b4f2956d9fe"
+                                                                  :status "pending"
+                                                                  :id "9b6279f9c0a14b5db8f75524248f959f"
+                                                                  :players ["toto" "toto2" "null"]
+                                                                  :gameId "bataille"}}
               :joined {"9b6279f9c0a14b5db8f75524248f959f" {:id "9b6279f9c0a14b5db8f75524248f959f"
                                                            :player-id "427a1b3fda30425e96f21b4f2956d9fe"}}
               :current "9b6279f9c0a14b5db8f75524248f959f"}
@@ -83,7 +91,14 @@
      :breaking-point.core/breakpoints {:screen-width 1709, :screen-height 492}})
 
   (s/valid? ::app-db example-app-db)
-  (s/explain-str ::app-db example-app-db))
+  (s/explain-str ::app-db example-app-db)
+
+  (require '[cljs.spec.gen.alpha :as gen])
+
+  (gen/sample (s/gen ::app-db))
+  (gen/sample (s/gen ::notifications))
+;
+  )
 
 ;; -- Default app-db Value -----------------------------------------------------
 ;;
@@ -94,8 +109,9 @@
 ;;   2.  `events.cljs` for the registration of :initialise-db handler
 
 (def default-db
-  {:games {}
-   :rounds {:known {}
+  {:games {:fetching? false
+           :game-list []}
+   :rounds {:public-rounds {}
             :joined {}
             :current nil}
    :profile {}

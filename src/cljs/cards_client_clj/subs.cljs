@@ -43,12 +43,6 @@
 ;; Layer 3 - Materialized views
 
 (re-frame/reg-sub
- ::known-rounds
- :<- [::rounds]
- (fn [rounds _]
-   (:known rounds)))
-
-(re-frame/reg-sub
  ::fetching-rounds?
  :<- [::rounds]
  (fn [rounds _]
@@ -64,7 +58,7 @@
  ::game-list
  :<- [::games]
  (fn [games _]
-   (:list games)))
+   (:game-list games)))
 
 (re-frame/reg-sub
  ::joined-rounds
@@ -73,10 +67,61 @@
    (:joined rounds)))
 
 (re-frame/reg-sub
- ::current-round
+ ::current-round-id
  :<- [::rounds]
  (fn [rounds _]
    (:current rounds)))
+
+(re-frame/reg-sub
+ ::current-player-id
+ :<- [::current-round]
+ (fn [current-round  _]
+   (:round-info/player-id current-round)))
+
+(re-frame/reg-sub
+ ::current-round
+ :<- [::rounds]
+ :<- [::current-round-id]
+ (fn [[rounds id] _]
+   (get-in rounds [:joined id])))
+
+(re-frame/reg-sub
+ ::current-round-components
+ :<- [::current-round]
+ (fn [current-round _]
+   (get-in current-round [:components])))
+
+(re-frame/reg-sub
+ ::current-round-component
+ :<- [::current-round-components]
+ (fn [components [_ component-id]]
+   (get components component-id)))
+
+(re-frame/reg-sub
+ ::current-round-actions
+ :<- [::current-round]
+ (fn [current-round _]
+   (get-in current-round [:actions])))
+
+(re-frame/reg-sub
+ ::current-round-component-action
+ :<- [::current-round-actions]
+ (fn [actions [_ component-id]]
+   (filter (fn [{id :target_component}] (= id component-id)) actions)))
+
+(re-frame/reg-sub
+ ::current-round-interface
+ :<- [::current-round]
+ (fn [current-round _]
+   (get-in current-round [:interface])))
+
+(re-frame/reg-sub
+ ::current-round-components-id-at-position
+ :<- [::current-round-interface]
+ (fn [interface [_ position]]
+   (->> interface
+        (filter (fn [[_ info]] (= (:position info) position)))
+        (map #(:component-id (second %))))))
 
 (re-frame/reg-sub
  ::username
@@ -85,19 +130,20 @@
    (:username profile)))
 
 (re-frame/reg-sub
- ::known-round
- :<- [::known-rounds]
- (fn [known-rounds [_ round-id]]
-   (get known-rounds round-id)))
+ ::public-rounds
+ :<- [::rounds]
+ (fn [rounds _]
+   (:public-rounds rounds)))
 
 (re-frame/reg-sub
- ::not-joined-known-rounds
- :<- [::known-rounds]
- :<- [::joined-rounds]
- (fn [[known-rounds joined-rounds] _]
-   (filter ; Filter out rounds in joined-rounds
-    #(not (joined-rounds (first %)))
-    known-rounds)))
+ ::joinable-rounds
+ :<- [::public-rounds]
+ :<- [::username]
+ (fn [[public-rounds username] _]
+   (filter ; Filter out rounds where current username is taken
+    (fn [[_round-id {:round-info/keys [players]}]]
+      (not (contains? players username)))
+    public-rounds)))
 
 (re-frame/reg-sub
  ::notifications
