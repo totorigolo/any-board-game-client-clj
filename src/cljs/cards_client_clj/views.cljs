@@ -108,6 +108,10 @@
   [component-id]
   (let [component @(subscribe [::subs/current-round-component component-id])
         actions @(subscribe [::subs/current-round-component-action component-id])]
+    (when (nil? component)
+      ;; Request the component from the server if nil
+      ;; TODO: Move this to the event handler
+      (dispatch [::events/get-components-in-current-round [component-id]]))
     [:div.component {:style {:border "1px solid blue"}}
      (for [card (:cards component)]
        [:p (with-out-str (pprint card))])

@@ -237,6 +237,12 @@
                                                    responses)]}))
 
 (re-frame/reg-event-fx
+ ::ws->get-components
+ [check-db]
+ (fn [_ [_ round-id player-id ids]]
+   {::send-on-websocket [round-id player-id {:type "GET_COMPONENTS" :ids ids}]}))
+
+(re-frame/reg-event-fx
  ::start-game
  [check-db]
  (fn [_ [_ round-id player-id]]
@@ -275,6 +281,14 @@
    (update-in db [:rounds :joined round-id :actions]
               (fn [actions]
                 (filter #(not= (:target_component %) target-component) actions)))))
+
+(re-frame/reg-event-fx
+ ::get-components-in-current-round
+ [check-db]
+ (fn [{db :db} [_ component-ids]]
+   (let [round-id (get-in db [:rounds :current])
+         player-id (get-in db [:rounds :joined round-id :round-info/player-id])]
+     {:dispatch [::ws->get-components round-id player-id component-ids]})))
 
 (re-frame/reg-event-db
  ::ws-opened
