@@ -4,7 +4,7 @@
                   :exclusions [com.google.javascript/closure-compiler-unshaded
                                org.clojure/google-closure-library
                                org.clojure/google-closure-library-third-party]]
-                 [thheller/shadow-cljs "2.10.13"]
+                 [thheller/shadow-cljs "2.10.15"]
                  [reagent "0.10.0"]
                  [re-frame "0.12.0"]
                  [clj-commons/secretary "1.2.4"]
@@ -33,7 +33,6 @@
                                :compiler-options {:infer-externs :auto}
                                :modules {:app {:init-fn cards-client-clj.core/init
                                                :preloads [devtools.preload
-                                                          day8.re-frame-10x.preload
                                                           re-frisk.preload]}}
                                :dev {:compiler-options {:closure-defines {}}}
                                :release {:build-options
@@ -61,8 +60,7 @@
                             ["shadow" "compile" "karma-test"]
                             ["shell" "karma" "start" "--single-run" "--reporters" "junit,dots"]]}
   :profiles  {:dev {:dependencies [[binaryage/devtools "1.0.2"]
-                                   [re-frisk "1.3.4"]
-                                   [day8.re-frame/re-frame-10x "0.6.7"]]
+                                   [re-frisk "1.3.4"]]
                     :source-paths ["dev"]}
               :prod {:dependencies []}}
 ;;   :prep-tasks [["less" "once"]]

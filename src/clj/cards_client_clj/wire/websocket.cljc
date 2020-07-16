@@ -1,8 +1,8 @@
 (ns cards-client-clj.wire.websocket
   (:require
    [clojure.spec.alpha :as s]
-   [goog.json :as goog-json]
-   [goog.json.Serializer]
+  ;;  [goog.json :as goog-json]
+  ;;  [goog.json.Serializer]
    #?(:clj [clojure.test :refer [is]]
       :cljs [cljs.test :refer-macros [is]])))
 
