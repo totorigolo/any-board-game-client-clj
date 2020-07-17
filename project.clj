@@ -12,7 +12,7 @@
                  [breaking-point "0.1.2"]
                  [day8.re-frame/http-fx "0.1.6"]]
   :plugins [[lein-shadow "0.2.0"]
-            [lein-less "1.7.5"]
+            [lein-scss "0.3.0"]
             [lein-shell "0.5.0"]
             [lein-cljfmt "0.6.7"]]
   :min-lein-version "2.9.0"
@@ -21,8 +21,18 @@
   :clean-targets ^{:protect false} ["resources/public/js/compiled"
                                     "target"
                                     "test/js"]
-  :less {:source-paths ["less"]
-         :target-path  "resources/public/css"}
+  :scss {:builds
+         {:develop    {:source-dir "resources/sass"
+                       :dest-dir   "resources/public/css"
+                       :executable "sassc"
+                       :args       ["-m" "-I" "scss/" "-t" "nested"]}
+          :production {:source-dir "resources/sass"
+                       :dest-dir   "resources/public/css"
+                       :executable "sassc"
+                       :args       ["-I" "scss/" "-t" "compressed"]}}}
+  :sass {:src "resources/sass"
+         :output-directory "resources/public/css"
+         :command :scss}
   :shell {:commands {"open" {:windows ["cmd" "/c" "start"]
                              :macosx  "open"
                              :linux   "xdg-open"}}}
@@ -62,6 +72,4 @@
   :profiles  {:dev {:dependencies [[binaryage/devtools "1.0.2"]
                                    [re-frisk "1.3.4"]]
                     :source-paths ["dev"]}
-              :prod {:dependencies []}}
-;;   :prep-tasks [["less" "once"]]
-  )
+              :prod {:dependencies []}})

@@ -1,31 +1,64 @@
 (ns cards-client-clj.views
   (:require
    [clojure.string]
-   [clojure.pprint :refer [pprint]]
    [re-frame.core :refer [subscribe dispatch]]
-   [breaking-point.core :as bp]
+   [reagent.core :as reagent]
    [cards-client-clj.subs :as subs]
    [cards-client-clj.events :as events]
-   [cards-client-clj.routes :as routes]))
+   [cards-client-clj.routes :as routes]
+   [cards-client-clj.views.pages.home :refer [home-page]]
+   [cards-client-clj.views.pages.about :refer [about-page]]
+   [cards-client-clj.views.pages.create-round :refer [create-round-page]]
+   [cards-client-clj.views.pages.join-round :refer [join-round-page]]
+   [cards-client-clj.views.pages.play :refer [play-page]]))
 
-(defn nav []
-  (for [{:keys [url title]} [{:url (routes/home) :title "Home"}
-                             {:url (routes/about) :title "About"}
-                             {:url (routes/create-round) :title "Create new round"}
-                             {:url (routes/join-round) :title "Join round"}
-                             {:url (routes/play) :title "Play"}]]
-    [:div {:key title}
-     [:a {:href url} title]]))
 
-(defn view-username
-  [{:keys [editable?]}]
-  [:div
-   [:label {:for "username"} "User name:"]
-   [:input#username
-    {:type "text"
-     :disabled (not editable?)
-     :value @(subscribe [::subs/username])
-     :on-change #(dispatch [::events/change-username (-> % .-target .-value)])}]])
+;; -- Navigation ---------------------------------------------------------------
+;;
+
+(defn nav
+  []
+  (reagent/with-let [active (reagent/atom false)]
+    [:nav.navbar {:role "navigation" :aria-label "main navigation"}
+     [:div.navbar-brand
+      [:a.navbar-item {:href (routes/home)} "ABG"]
+      [:a.navbar-burger.burger {:role "button"
+                                :class (when @active "is-active")
+                                :on-click #(reset! active (not @active))
+                                :aria-label "menu"
+                                :aria-expanded (if @active "true" "false")
+                                :data-target "mainNavbar"}
+       [:span {:aria-hidden true}]
+       [:span {:aria-hidden true}]
+       [:span {:aria-hidden true}]]]
+     [:div#mainNavbar.navbar-menu {:class (when @active "is-active")}
+      [:div.navbar-start
+       [:a.navbar-item {:href (routes/create-round)} "Start a game"]
+       [:a.navbar-item {:href (routes/join-round)} "Join a game"]
+       [:div.navbar-item.has-dropdown.is-hoverable
+        [:a.navbar-link "More"]
+        [:div.navbar-dropdown
+         [:a.navbar-item {:href (routes/about)} "About"]
+         [:hr.navbar-divider]
+         [:a.navbar-item "Report an issue"]]]]
+      [:div.navbar-end
+       [:div.navbar-item
+        [:div.buttons
+         [:a.button.is-primary {:href (routes/play)} "Play"]
+         [:a.button.is-light {:on-click #(dispatch [::events/edit-profile true])}
+          "Profile"]]]]]]))
+
+;; -- Footer -------------------------------------------------------------------
+;;
+
+(defn footer []
+  ;; [:footer.footer
+  ;;  [:div.content.has-text-centered
+  ;;   [:p "123"]]]
+  nil)
+
+;; -- Notifications ------------------------------------------------------------
+;;
 
 (defn view-notification
   [{id :notification/id title :notification/title text :notification/text}]
@@ -34,208 +67,70 @@
    [:p text]
    [:button {:on-click #(dispatch [::events/close-notification id])} "X"]])
 
-(defn panel
-  [title body]
-  [:div
-   (let [notifications @(subscribe [::subs/notifications])]
-     (for [notification (vals notifications)]
-       ^{:key (:notification/id notification)} [view-notification notification]))
-   [:h1 title]
-   (nav)
-   body])
-
-(defn display-re-pressed-example []
-  [:div
-   [:p
-    [:span "Listening for keydown events. A message will be displayed when you type "]
-    [:strong [:code "hello"]]
-    [:span ". So go ahead, try it out!"]]
-   (when-let [re-pressed-example-text @(subscribe [::subs/re-pressed-example-text])]
-     [:div
-      {:style {:padding          "16px"
-               :background-color "lightgrey"
-               :border           "solid 1px grey"
-               :border-radius    "4px"
-               :margin-top       "16px"}}
-      re-pressed-example-text])])
-
-(defn home-panel []
-  (panel "Home"
-         [:div
-          [display-re-pressed-example]
-          [:div
-           [:h3 (str "screen-width: " @(subscribe [::bp/screen-width]))]
-           [:h3 (str "screen: " @(subscribe [::bp/screen]))]]]))
-
-(defn about-panel []
-  (panel "About"
-         [:div
-          [:p "Wonderbar website, WIP"]]))
-
-(defn button-fetch-games
+(defn notifications
   []
-  [:button {:class "button"
-            :on-click  #(dispatch [::events/fetch-games])}
-   "Refresh available games"])
+  (into [:<>]
+        (let [notifications @(subscribe [::subs/notifications])]
+          (for [notification (vals notifications)]
+            ^{:key (:notification/id notification)}
+            [view-notification notification]))))
 
-(defn button-refresh-public-rounds
+;; -- Profile modal ------------------------------------------------------------
+;;
+
+(defn- profile-modal-inner
+  "This inner component exists in order to get rid of temporary edits when the
+   modal is closed. It has a inner state with the temporary edits."
+  [{:keys [username]}]
+  (reagent/with-let [new-username (reagent/atom username)]
+    [:<>
+     [:div.modal-background]
+     [:div.modal-card
+      [:header.modal-card-head
+       [:p.modal-card-title "User profile"]
+       [:button.delete {:aria-label "close" :on-click #(dispatch [::events/edit-profile false])}]]
+      [:section.modal-card-body
+       ;; TODO: Extract this code for a field to a function/namespace
+       [:div.field.is-horizontal
+        [:div.field-label.is-normal
+         [:label.label "Username"]]
+        [:div.field-body
+         [:div.field
+          [:p.control
+           [:input.input {:type "text"
+                          :placeholder "Username"
+                          :value @new-username
+                          :on-change #(reset! new-username (-> % .-target .-value))}]]]]]]
+      [:footer.modal-card-foot
+       [:button.button.is-success {:on-click #(dispatch [::events/update-profile {:username @new-username}])}
+        "Save changes"]
+       [:button.button {:on-click #(dispatch [::events/edit-profile false])} "Cancel"]]]]))
+
+(defn profile-modal
   []
-  [:button {:class "button"
-            :on-click  #(dispatch [::events/fetch-rounds])}
-   "Refresh available rounds"])
+  (when @(subscribe [::subs/editing-profile])
+    [:div.modal.is-active
+     [profile-modal-inner {:username @(subscribe [::subs/username])}]]))
 
-(defn view-game
-  [{:game-description/keys [id rules description min-players max-players]}]
-  [:div
-   [:h1 id]
-   [:p description]
-   [:p rules]
-   [:p (str "Players: " min-players " - " max-players)]
-   [:button {:on-click #(dispatch [::events/create-round id])}
-    "Start"]])
+;; -- Root ---------------------------------------------------------------------
+;;
 
-(defn create-round-panel []
-  (panel "Create round"
-         [:div
-          [button-fetch-games]
-          [view-username {:editable? true}]
-          (when @(subscribe [::subs/fetching-games?])
-            [:p "Loading..."])
-          (for [{game-id :game-description/id :as game} @(subscribe [::subs/game-list])]
-            ^{:key game-id} [view-game game])]))
-
-(defn view-card-by-id
-  [component-id]
-  (let [component @(subscribe [::subs/current-round-component component-id])
-        actions @(subscribe [::subs/current-round-component-action component-id])]
-    (when (nil? component)
-      ;; Request the component from the server if nil
-      ;; TODO: Move this to the event handler
-      (dispatch [::events/get-components-in-current-round [component-id]]))
-    [:div.component {:style {:border "1px solid blue"}}
-     (for [card (:cards component)]
-       [:p (with-out-str (pprint card))])
-     [:pre [:code (with-out-str (pprint component))]]
-     [:pre [:code (with-out-str (pprint actions))]]]))
-
-(defn view-card-deck
-  [component actions]
-  (let [on-click? (first (filter #(= (:type %) "OnClick") actions))]
-    [:div.component {:style {:border "1px solid red"}}
-     [:h4 (:id component)]
-     (for [card-id (:cards component)]
-       [:<> {:key card-id}
-        [view-card-by-id card-id]
-        (when on-click?
-          [:button
-           {:on-click #(dispatch [::events/play-action {:source-id (:id component)
-                                                        :target-id card-id}])}
-           "Play this card"])])
-     [:pre [:code (with-out-str (pprint component))]]
-     [:pre [:code (with-out-str (pprint actions))]]]))
-
-(defn view-current-round-components
-  [component-id]
-  (let [{:keys [id type] :as component} @(subscribe [::subs/current-round-component component-id])
-        actions @(subscribe [::subs/current-round-component-action component-id])]
-    ^{:key id}
-    (case type
-      "CardDeck" (view-card-deck component actions)
-      [:h3 (str "Unknown component type: " type)])))
-
-(defn view-current-round-components-at-position
-  [position]
-  (for [component-id @(subscribe [::subs/current-round-components-id-at-position position])]
-    ^{:key component-id} [view-current-round-components component-id]))
-
-(defn play-round [{round-id :round-info/id
-                   player-id :round-info/player-id
-                   :as round}]
-  [:div
-   [:button {:on-click #(dispatch [::events/set-current-round nil])} "Change current round"]
-
-   [:button {:on-click #(dispatch [::events/refresh-board round-id player-id])} "Refresh board"]
-
-   (when (:created-by-me? round)
-     [:button {:on-click #(dispatch [::events/start-game round-id player-id])} "Start the game"])
-   [:p (str "Current round: " round-id)]
-
-   [:h3 "center"]
-   (view-current-round-components-at-position "center")
-
-   [:h3 "top"]
-   (view-current-round-components-at-position "top")
-
-   [:h3 "left"]
-   (view-current-round-components-at-position "left")
-
-   [:h3 "right"]
-   (view-current-round-components-at-position "right")
-
-   [:h3 "bottom"]
-   (view-current-round-components-at-position "bottom")])
-
-(defn play-view-round [{:round-info/keys [id game-id player-id joining? players created-on]}]
-  [:div
-   [:h1 (str game-id " - " (clojure.string/join ", " players))]
-   [:p (str "Joining: " (boolean joining?))]
-   [:p (str "Round ID: " id)]
-   [:p (str "Game ID: " game-id)]
-   [:p (str "Player ID: " player-id)]
-   [:p (str "Players: " players)]
-   [:p (str "Created on: " created-on)]
-   [:button {:on-click #(dispatch [::events/set-current-round id])}
-    "Play"]])
-
-(defn play-no-round []
-  [:div
-   [:p "Choose a round, or go join or create one."]
-   (let [round-map @(subscribe [::subs/joined-rounds])]
-     (if (empty? round-map) (str "You didn't join any round yet.")
-         (for [{round-id :round-info/id :as round} (vals round-map)]
-           ^{:key round-id} [play-view-round round])))])
-
-(defn play-panel []
-  (panel "Play round"
-         [:div
-          [view-username {:editable? false}]
-          (if-let [current-round @(subscribe [::subs/current-round])]
-            [play-round current-round]
-            [play-no-round])]))
-
-(defn join-view-round [{:round-info/keys [id game-id players created-on]}]
-  [:div
-   [:h1 (str game-id " - " (clojure.string/join ", " players))]
-   [:p (str "Round ID: " id)]
-   [:p (str "Game ID: " game-id)]
-   [:p (str "Players: " players)]
-   [:p (str "Created on: " created-on)]
-   [:button {:on-click #(dispatch [::events/join-round id])}
-    "Join"]])
-
-(defn join-round-panel []
-  (panel "Join round"
-         [:div
-          [button-refresh-public-rounds]
-          [view-username {:editable? true}]
-          (when @(subscribe [::subs/fetching-rounds?])
-            [:p "Fetching joinable rounds..."])
-          (for [{round-id :round-info/id :as joinable-round} (vals @(subscribe [::subs/joinable-rounds]))]
-            ^{:key round-id} [join-view-round joinable-round])]))
-
-(defn- panels [panel-name]
-  (case panel-name
-    :home-panel [home-panel]
-    :about-panel [about-panel]
-    :create-round-panel [create-round-panel]
-    :join-round-panel [join-round-panel]
-    :play-panel [play-panel]
-    [:div (str "Not found: " panel-name)]))
-
-(defn show-panel [panel-name]
-  [panels panel-name])
+(defn show-page [page-name]
+  (case page-name
+    :home-page [home-page]
+    :about-page [about-page]
+    :create-round-page [create-round-page]
+    :join-round-page [join-round-page]
+    :play-page [play-page]
+    [:div (str "Not found: " page-name)]))
 
 (defn root []
   [:div
-   (let [active-panel @(subscribe [::subs/active-panel])]
-     [show-panel active-panel])])
+   [profile-modal]
+   [notifications]
+   [nav]
+   [:section.section
+    [:div.container
+     (let [active-page @(subscribe [::subs/active-page])]
+       [show-page active-page])]]
+   [footer]])

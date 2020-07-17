@@ -39,6 +39,11 @@ reading.
    * We recommend using the version from the official distribution.
    * Be careful to install Caddy v2.
 
+For compiling the SassC stylesheets:
+- I didn't find official install instructions. You should find packages for your
+  distribution, or you can build from source as explained in the GitHub
+  repository: https://github.com/sass/sassc
+
 ### 🛠️ How to run it
 
 ```bash
@@ -50,9 +55,9 @@ lein deps
 # However, this won't serve the API. Read below for how-to.
 lein dev
 
-# To build the Less files to CSS, use one of:
-lein less auto # for live reload
-lein less once
+# To build the SassC files to CSS, use one of:
+lein scss [:develop|:production] auto # for live reload
+lein scss [:develop|:production] once
 ```
 
 The instructions above are for the frontend only. If you want the full website,

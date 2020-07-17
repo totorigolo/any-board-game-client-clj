@@ -45,9 +45,9 @@
 (s/def ::game-list (s/coll-of ::game-description))
 (s/def ::games (s/keys :req-un [::fetching? ::game-list]))
 
-(s/def ::username string?)
+(s/def ::username (s/nilable string?))
 
-(s/def ::active-panel keyword?)
+(s/def ::active-page keyword?)
 
 
 (s/def ::profile (s/keys :req-un []
@@ -56,7 +56,7 @@
 (s/def ::rounds (s/keys :req-un [::public-rounds ::joined ::current]))
 
 (s/def ::app-db (s/keys :req-un [::games ::rounds ::profile ::notifications]
-                        :opt-un [:breaking-point.core/breakpoints ::active-panel]))
+                        :opt-un [:breaking-point.core/breakpoints ::active-page]))
 
 (comment
   (def example-app-db
@@ -87,7 +87,7 @@
                                       :title "Alert"
                                       :text "I don't have inspiration"
                                       :created-at 123456}}
-     :active-panel :play-panel
+     :active-page :play-page
      :breaking-point.core/breakpoints {:screen-width 1709, :screen-height 492}})
 
   (s/valid? ::app-db example-app-db)
@@ -114,5 +114,6 @@
    :rounds {:public-rounds {}
             :joined {}
             :current nil}
-   :profile {}
+   :profile {:username nil
+             :editing false}
    :notifications {}})

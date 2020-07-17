@@ -316,10 +316,10 @@
    db/default-db))
 
 (re-frame/reg-event-db
- ::set-active-panel
+ ::set-active-page
  [check-db]
- (fn [db [_ active-panel]]
-   (assoc db :active-panel active-panel)))
+ (fn [db [_ active-page]]
+   (assoc db :active-page active-page)))
 
 (re-frame/reg-event-db
  ::set-re-pressed-example-text
@@ -328,10 +328,18 @@
    (assoc db :re-pressed-example-text value)))
 
 (re-frame/reg-event-db
- ::change-username
+ ::edit-profile
  [check-db]
- (fn [db [_ username]]
-   (assoc-in db [:profile :username] username)))
+ (fn [db [_ editing?]]
+   (assoc-in db [:profile :editing] editing?)))
+
+(re-frame/reg-event-fx
+ ::update-profile
+ [check-db]
+ (fn [{db :db} [_ {:keys [username]}]]
+   {:db (-> db
+            (assoc-in [:profile :username] username))
+    :dispatch [::edit-profile false]}))
 
 (re-frame/reg-event-db
  ::set-current-round
@@ -374,7 +382,7 @@
                                                           :joining? false
                                                           :created-by-me? (= created-by my-username)
                                                           :actions #{})))
-      :dispatch-n [[::set-active-panel :play-panel]
+      :dispatch-n [[::set-active-page :play-page]
                    [::set-current-round round-id]
                    [::connect-round-ws round-id player-id]]})))
 
@@ -421,7 +429,7 @@
                                                         :joining? false
                                                         :created-by-me? (= created-by my-username)
                                                         :actions #{})))
-    :dispatch-n [[::set-active-panel :play-panel]
+    :dispatch-n [[::set-active-page :play-page]
                  [::set-current-round round-id]
                  [::connect-round-ws round-id player-id]]})))
 

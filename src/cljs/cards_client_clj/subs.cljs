@@ -10,9 +10,9 @@
 ;; Layer 2 - Extractors
 
 (re-frame/reg-sub
- ::active-panel
+ ::active-page
  (fn [db _]
-   (:active-panel db)))
+   (:active-page db)))
 
 (re-frame/reg-sub
  ::rounds
@@ -128,6 +128,12 @@
  :<- [::profile]
  (fn [profile _]
    (:username profile)))
+
+(re-frame/reg-sub
+ ::editing-profile
+ :<- [::profile]
+ (fn [profile _]
+   (:editing profile)))
 
 (re-frame/reg-sub
  ::public-rounds

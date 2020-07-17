@@ -22,7 +22,7 @@
   ;; --------------------
   ;; define routes here
   (defroute home "/" []
-    (re-frame/dispatch [::events/set-active-panel :home-panel])
+    (re-frame/dispatch [::events/set-active-page :home-page])
     (re-frame/dispatch [::events/set-re-pressed-example-text nil])
     (re-frame/dispatch
      [::rp/set-keydown-rules
@@ -38,20 +38,20 @@
          ]]}]))
 
   (defroute about "/about" []
-    (re-frame/dispatch [::events/set-active-panel :about-panel]))
+    (re-frame/dispatch [::events/set-active-page :about-page]))
 
   (defroute create-round "/create-round" []
-    (re-frame/dispatch [::events/set-active-panel :create-round-panel]))
+    (re-frame/dispatch [::events/set-active-page :create-round-page]))
 
   (defroute join-round "/join-round" []
-    (re-frame/dispatch [::events/set-active-panel :join-round-panel]))
+    (re-frame/dispatch [::events/set-active-page :join-round-page]))
 
   (defroute play "/play" []
-    (re-frame/dispatch [::events/set-active-panel :play-panel]))
+    (re-frame/dispatch [::events/set-active-page :play-page]))
 
   (defroute play-round "/play/:roundId" [round-id]
     (re-frame/dispatch [::events/set-current-round round-id])
-    (re-frame/dispatch [::events/set-active-panel :play-panel]))
+    (re-frame/dispatch [::events/set-active-page :play-page]))
 
 
   ;; --------------------
