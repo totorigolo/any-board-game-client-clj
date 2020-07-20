@@ -79,6 +79,15 @@ Then, go to http://localhost:42800/, where the API is now available at `/api`.
 
 For more details, see [README.re-frame.md](./README.re-frame.md).
 
+### 🛠️ How to deliver
+
+```shell
+rm -r resources/public/css resources/public/js
+lein scss :production once
+lein prod
+scp -r ./resources/public user@hostname:/the/destination/path
+```
+
 ## 🙏 Credits
 
 Thanks for the re-frame framework, its extensive documentation, and really
