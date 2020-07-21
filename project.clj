@@ -4,9 +4,9 @@
                   :exclusions [com.google.javascript/closure-compiler-unshaded
                                org.clojure/google-closure-library
                                org.clojure/google-closure-library-third-party]]
-                 [thheller/shadow-cljs "2.10.15"]
+                 [thheller/shadow-cljs "2.10.17"]
                  [reagent "0.10.0"]
-                 [re-frame "0.12.0"]
+                 [re-frame "1.0.0"]
                  [clj-commons/secretary "1.2.4"]
                  [re-pressed "0.3.1"]
                  [breaking-point "0.1.2"]
@@ -68,7 +68,7 @@
                             ["shell" "open" "target/build-report.html"]]
             "karma"        ["with-profile" "prod" "do"
                             ["shadow" "compile" "karma-test"]
-                            ["shell" "karma" "start" "--single-run" "--reporters" "junit,dots"]]}
+                            ["shell" "karma" "start" "--single-run" "--reporters" "junit,dots" "--browsers" "ChromiumHeadless"]]}
   :profiles  {:dev {:dependencies [[binaryage/devtools "1.0.2"]
                                    [re-frisk "1.3.4"]]
                     :source-paths ["dev"]}
